@@ -1,8 +1,8 @@
 name: Deployment
-"on":
-    push:
-      branches:
-        - main
+on:
+  push:
+    branches:
+      - main
 
 jobs:
   deploy:
@@ -10,6 +10,29 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Setup Server Directory
+        uses: appleboy/ssh-action@v1.2.1
+        with:
+          host: ${{ secrets.HOST_SERVER }}
+          username: ${{ secrets.HOST_USER_NAME }}
+          key: ${{ secrets.HOST_SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            mkdir -p /home/ubuntu/nginx-deploy
+            # Check if Docker and Docker Compose are installed
+            if ! command -v docker &> /dev/null; then
+              echo "Docker not found, installing..."
+              sudo apt-get update
+              sudo apt-get install -y docker.io
+              sudo systemctl start docker
+              sudo systemctl enable docker
+            fi
+            if ! command -v docker-compose &> /dev/null; then
+              echo "Docker Compose not found, installing..."
+              sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+              sudo chmod +x /usr/local/bin/docker-compose
+            fi
 
       - name: Copy docker-compose.yml and HTML files to server
         uses: appleboy/scp-action@v0.1.7
